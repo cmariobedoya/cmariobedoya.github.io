@@ -1,0 +1,606 @@
+
+<h2 class="sr-only">Polla Mundialista — sorteo equilibrado con favoritos</h2>
+
+<style>
+:root {
+  --primary-green: #0B7B3F;
+  --primary-gold: #FFD700;
+  --accent-blue: #003399;
+  --accent-red: #E24B4A;
+  --light-green: #E8F5E9;
+  --dark-green: #1B5E3F;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.app { padding: 1.5rem 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #E8F5E9 100%); min-height: 100vh; }
+
+.header { 
+  text-align: center; margin-bottom: 2.5rem; 
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+  padding: 2.5rem 1.5rem;
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(11, 123, 63, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '⚽';
+  position: absolute;
+  font-size: 120px;
+  opacity: 0.1;
+  top: -30px;
+  right: -30px;
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+.header h1 { 
+  font-size: 36px; font-weight: 700; color: white; 
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  letter-spacing: 1px;
+}
+.header p { 
+  font-size: 15px; color: rgba(255,255,255,0.9); margin-top: 12px;
+  font-weight: 500;
+}
+
+.prize-banner {
+  background: linear-gradient(135deg, #FFFACD 0%, #FFE4B5 100%);
+  border: 2px solid var(--primary-gold);
+  border-radius: 15px;
+  padding: 1.5rem 1.75rem;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2rem; flex-wrap: wrap; gap: 20px;
+  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.2);
+}
+.prize-banner .label { font-size: 12px; color: #8B5A00; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.prize-banner .amount { font-size: 26px; font-weight: 700; color: var(--primary-green); }
+.prize-banner .sub { font-size: 12px; color: #8B5A00; font-weight: 600; }
+
+.tabs {
+  display: flex; gap: 0;
+  border-bottom: 3px solid var(--primary-green);
+  margin-bottom: 2rem;
+  background: white;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.tab {
+  padding: 12px 24px; font-size: 14px; background: none; border: none;
+  color: #666; cursor: pointer; font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+}
+.tab:hover { background: rgba(11, 123, 63, 0.05); }
+.tab.active { 
+  color: white; 
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+  box-shadow: inset 0 -4px 0 rgba(255, 215, 0, 0.5);
+}
+
+.section { display: none; }
+.section.active { display: block; animation: slideIn 0.3s ease; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  background: white;
+  border: 0 solid var(--primary-green);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem; margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(11, 123, 63, 0.1);
+  transition: all 0.3s ease;
+}
+.card:hover { 
+  box-shadow: 0 8px 24px rgba(11, 123, 63, 0.15);
+  transform: translateY(-2px);
+}
+
+.section-label {
+  font-size: 12px; font-weight: 700; color: var(--primary-green);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+}
+
+.input-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+.input-row input { 
+  flex: 1; font-size: 14px; 
+  padding: 10px 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+.input-row input:focus { 
+  outline: none;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(11, 123, 63, 0.1);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+  color: white;
+  border: none; padding: 11px 20px; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(11, 123, 63, 0.3);
+}
+.btn-primary:hover { 
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(11, 123, 63, 0.4);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-danger {
+  background: white; border: 1.5px solid var(--accent-red); color: var(--accent-red);
+  padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn-danger:hover { background: var(--accent-red); color: white; }
+
+.empty-state { text-align: center; padding: 3rem 1.5rem; color: #999; font-size: 15px; }
+
+.participant-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+}
+
+.p-card {
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.p-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-green), var(--primary-gold));
+}
+.p-card:hover { 
+  border-color: var(--primary-green);
+  box-shadow: 0 8px 24px rgba(11, 123, 63, 0.15);
+  transform: translateY(-4px);
+}
+.p-card .name { font-size: 15px; font-weight: 700; color: var(--primary-green); }
+.p-card .teams { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+.team-badge {
+  font-size: 12px; padding: 6px 12px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f0f0f0; color: #666;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.team-badge.fav { background: linear-gradient(135deg, #FFFACD, #FFE4B5); color: var(--primary-gold); font-weight: 700; }
+.team-badge.winner { background: linear-gradient(135deg, #FFD700, #FFA500); color: #8B5A00; font-weight: 700; }
+.team-badge.eliminated { text-decoration: line-through; opacity: 0.4; }
+
+.teams-two-col {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;
+}
+.team-group-label {
+  font-size: 11px; color: var(--primary-green); margin-bottom: 6px; font-weight: 700; text-transform: uppercase;
+}
+.team-pill {
+  font-size: 12px; padding: 6px 12px; border-radius: 20px;
+  background: white; color: #666;
+  border: 1.5px solid #ddd;
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; transition: all 0.2s ease;
+}
+.team-pill:hover { 
+  border-color: var(--primary-green);
+  background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+  transform: translateY(-2px);
+}
+.team-pill.fav-pill { 
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B5A00; 
+  border-color: var(--primary-gold);
+  font-weight: 700;
+}
+.team-pill.fav-pill:hover { background: linear-gradient(135deg, #FFA500, #FF8C00); }
+
+select {
+  font-size: 14px; padding: 10px 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white; color: #333;
+  width: 100%; margin-bottom: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+select:focus {
+  outline: none;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(11, 123, 63, 0.1);
+}
+
+.tag {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  background: #f0f0f0; color: #666;
+  font-weight: 600;
+}
+
+.winner-banner {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border: 3px solid var(--primary-gold);
+  border-radius: 16px; padding: 2rem;
+  text-align: center; margin-bottom: 2rem; display: none;
+  box-shadow: 0 12px 30px rgba(255, 215, 0, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+.winner-banner h2 { font-size: 24px; font-weight: 700; color: #8B5A00; }
+.winner-banner p { font-size: 14px; color: #654321; margin-top: 8px; font-weight: 600; }
+
+.divider {
+  display: flex; align-items: center; gap: 12px; margin: 16px 0;
+  font-size: 12px; color: var(--primary-green); font-weight: 700; text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--primary-green), transparent);
+}
+
+.info-box {
+  background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+  border: 2px solid var(--primary-green);
+  border-radius: 10px;
+  padding: 14px 16px; font-size: 13px; color: var(--primary-green);
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+</style>
+
+<div class="app">
+
+<div class="header">
+  <h1>⚽ Polla Mundialista</h1>
+  <p>Sorteo equilibrado: 1 favorito + 1 comodín por persona</p>
+</div>
+
+<div class="prize-banner">
+  <div>
+    <div class="label">Participantes</div>
+    <div class="amount" id="participantCount">0</div>
+  </div>
+  <div>
+    <div class="label">Valor por persona</div>
+    <div class="amount">$50.000</div>
+    <div class="sub">COP</div>
+  </div>
+  <div>
+    <div class="label">Premio total</div>
+    <div class="amount" id="totalPrize">$0</div>
+    <div class="sub">COP</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('participantes')">Participantes</button>
+  <button class="tab" onclick="showTab('equipos')">Equipos</button>
+  <button class="tab" onclick="showTab('resultados')">Resultados</button>
+  <button class="tab" onclick="showTab('tabla')">Tabla</button>
+</div>
+
+<!-- PARTICIPANTES -->
+<div id="tab-participantes" class="section active">
+  <div class="card">
+    <div class="section-label">Agregar participante</div>
+    <div class="input-row">
+      <input type="text" id="newName" placeholder="Nombre" onkeydown="if(event.key==='Enter')addParticipant()" />
+      <button class="btn-primary" onclick="addParticipant()"><i class="ti ti-user-plus" aria-hidden="true"></i> Agregar</button>
+    </div>
+    <button class="btn-primary" id="sortBtn" onclick="doSort()" style="width:100%;margin-top:4px;" disabled>
+      <i class="ti ti-refresh" aria-hidden="true"></i> Sortear equipos
+    </button>
+    <div id="sortMsg" style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;text-align:center;min-height:18px;"></div>
+  </div>
+
+  <div id="participantGrid" class="participant-grid">
+    <div class="empty-state">Agrega participantes para comenzar</div>
+  </div>
+</div>
+
+<!-- EQUIPOS -->
+<div id="tab-equipos" class="section">
+  <div class="info-box">
+    <strong>⭐ Favoritos</strong> (toca para quitar) · <strong>Resto</strong> (toca para marcar como favorito)<br>
+    Para el sorteo equilibrado necesitas exactamente <strong>10 favoritos</strong> — uno por participante.
+  </div>
+  <div id="favCount" style="font-size:13px;color:var(--color-text-secondary);margin-bottom:10px;"></div>
+  <div class="section-label" style="margin-bottom:8px;">⭐ Favoritos</div>
+  <div id="favList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
+  <div class="divider">resto</div>
+  <div id="restList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+</div>
+
+<!-- RESULTADOS -->
+<div id="tab-resultados" class="section">
+  <div class="card">
+    <div class="section-label">Registrar resultado</div>
+    <label style="font-size:13px;color:var(--color-text-secondary);display:block;margin-bottom:4px;">Equipo</label>
+    <select id="winnerSelect"><option value="">— Selecciona equipo —</option></select>
+    <label style="font-size:13px;color:var(--color-text-secondary);display:block;margin-bottom:4px;">Resultado</label>
+    <select id="resultType">
+      <option value="win">Ganó un partido</option>
+      <option value="champion">🏆 ¡Campeón del Mundial!</option>
+      <option value="eliminated">Eliminado</option>
+    </select>
+    <button class="btn-primary" style="width:100%;margin-top:12px;" onclick="registerResult()">
+      <i class="ti ti-check" aria-hidden="true"></i> Registrar
+    </button>
+  </div>
+  <div id="resultLog"><div class="empty-state">Sin resultados aún</div></div>
+</div>
+
+<!-- TABLA -->
+<div id="tab-tabla" class="section">
+  <div id="winnerBanner" class="winner-banner">
+    <div style="font-size:32px;">🏆</div>
+    <h2 id="winnerName"></h2>
+    <p id="winnerDetail"></p>
+  </div>
+  <div id="tablaContent"><div class="empty-state">Sortea equipos para ver la tabla</div></div>
+</div>
+
+</div>
+
+<script>
+const BET = 50000;
+const KEY = 'pollaData_v2';
+
+const DEFAULT_FAVS = [
+  "Argentina 🇦🇷","Brasil 🇧🇷","Francia 🇫🇷","España 🇪🇸","Alemania 🇩🇪",
+  "Portugal 🇵🇹","Países Bajos 🇳🇱","Inglaterra 🇬🇧","Italia 🇮🇹","Uruguay 🇺🇾"
+];
+
+const ALL_TEAMS = [
+  "Argentina 🇦🇷","Brasil 🇧🇷","Francia 🇫🇷","España 🇪🇸","Alemania 🇩🇪",
+  "Portugal 🇵🇹","Países Bajos 🇳🇱","Inglaterra 🇬🇧","Italia 🇮🇹","Uruguay 🇺🇾",
+  "Colombia 🇨🇴","México 🇲🇽","Estados Unidos 🇺🇸","Marruecos 🇲🇦","Senegal 🇸🇳",
+  "Japón 🇯🇵","Corea del Sur 🇰🇷","Australia 🇦🇺","Suiza 🇨🇭","Croacia 🇭🇷",
+  "Dinamarca 🇩🇰","Ecuador 🇪🇨","Perú 🇵🇪","Chile 🇨🇱","Canadá 🇨🇦",
+  "Arabia Saudita 🇸🇦","Camerún 🇨🇲","Ghana 🇬🇭","Nigeria 🇳🇬","Argelia 🇩🇿",
+  "Turquía 🇹🇷","Rumania 🇷🇴"
+];
+
+let state = loadState();
+
+function loadState() {
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return { participants: [], teams: {}, results: [], sorted: false, favs: [...DEFAULT_FAVS] };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
+
+function fmt(n) { return '$' + n.toLocaleString('es-CO'); }
+
+function showTab(t) {
+  const tabs = ['participantes','equipos','resultados','tabla'];
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', tabs[i] === t));
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  if (t === 'equipos') renderEquipos();
+  if (t === 'tabla') renderTabla();
+  if (t === 'resultados') { updateWinnerSelect(); renderResultados(); }
+}
+
+function addParticipant() {
+  const inp = document.getElementById('newName');
+  const name = inp.value.trim();
+  if (!name || state.participants.includes(name)) {
+    inp.style.borderColor = '#E24B4A';
+    setTimeout(() => inp.style.borderColor = '', 1200);
+    return;
+  }
+  state.participants.push(name);
+  save(); inp.value = '';
+  renderParticipants(); updatePrize();
+}
+
+function removeParticipant(name) {
+  if (!confirm('¿Eliminar a ' + name + '?')) return;
+  state.participants = state.participants.filter(p => p !== name);
+  delete state.teams[name];
+  save(); renderParticipants(); updatePrize();
+}
+
+function doSort() {
+  const n = state.participants.length;
+  const favPool = [...state.favs].sort(() => Math.random() - 0.5).slice(0, n);
+  const restPool = ALL_TEAMS.filter(t => !state.favs.includes(t)).sort(() => Math.random() - 0.5);
+
+  if (favPool.length < n) {
+    document.getElementById('sortMsg').textContent = '⚠ No hay suficientes favoritos (' + state.favs.length + ' disponibles, se necesitan ' + n + ')';
+    return;
+  }
+
+  state.teams = {};
+  state.participants.forEach((p, i) => {
+    state.teams[p] = [favPool[i], restPool[i] || '—'];
+  });
+  state.sorted = true;
+  save();
+  renderParticipants();
+  document.getElementById('sortMsg').textContent = '✓ ¡Sorteo listo! Cada uno tiene 1 favorito + 1 comodín';
+  setTimeout(() => document.getElementById('sortMsg').textContent = '', 4000);
+}
+
+function getEliminated() { return state.results.filter(r => r.type === 'eliminated').map(r => r.team); }
+function getChampion() { const r = state.results.find(r => r.type === 'champion'); return r ? r.team : null; }
+
+function renderParticipants() {
+  const grid = document.getElementById('participantGrid');
+  const btn = document.getElementById('sortBtn');
+  const n = state.participants.length;
+  const favOk = state.favs.length >= n;
+  btn.disabled = n < 2 || !favOk;
+  if (n > 0 && !favOk) {
+    document.getElementById('sortMsg').textContent = '⚠ Necesitas al menos ' + n + ' favoritos en la pestaña Equipos';
+  }
+
+  if (n === 0) { grid.innerHTML = '<div class="empty-state">Agrega participantes para comenzar</div>'; return; }
+
+  const eliminated = getEliminated();
+  const champion = getChampion();
+
+  grid.innerHTML = state.participants.map(p => {
+    const teams = state.teams[p] || [null, null];
+    const isFav = [true, false];
+    const hasChamp = teams.includes(champion);
+
+    const badges = teams.map((t, i) => {
+      if (!t) return `<span class="team-badge">${isFav[i] ? '⭐' : '🎲'} Sin sortear</span>`;
+      const isC = t === champion;
+      const isE = eliminated.includes(t);
+      const cls = isC ? 'winner' : isE ? 'eliminated' : isFav[i] ? 'fav' : '';
+      const icon = isC ? '🏆 ' : isFav[i] ? '⭐ ' : '🎲 ';
+      return `<span class="team-badge ${cls}">${icon}${t}</span>`;
+    }).join('');
+
+    return `<div class="p-card" style="${hasChamp ? 'border:2px solid #BA7517' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="name">${p}</div>
+        <button class="btn-danger" onclick="removeParticipant('${p.replace(/'/g,"\\'")}')"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="teams">${badges}</div>
+      ${hasChamp ? '<div style="font-size:11px;color:#BA7517;margin-top:6px;font-weight:500">🏆 ¡Tiene al campeón!</div>' : ''}
+    </div>`;
+  }).join('');
+
+  updatePrize();
+}
+
+function updatePrize() {
+  const n = state.participants.length;
+  document.getElementById('participantCount').textContent = n;
+  document.getElementById('totalPrize').textContent = fmt(n * BET);
+}
+
+function renderEquipos() {
+  const favList = document.getElementById('favList');
+  const restList = document.getElementById('restList');
+  const countEl = document.getElementById('favCount');
+
+  countEl.textContent = state.favs.length + ' favoritos seleccionados' +
+    (state.favs.length === 10 ? ' ✓' : ' (se recomiendan 10 para 10 participantes)');
+
+  favList.innerHTML = state.favs.map(t =>
+    `<span class="team-pill fav-pill" onclick="toggleFav('${t.replace(/'/g,"\\'")}', true)" title="Quitar de favoritos">⭐ ${t} ✕</span>`
+  ).join('');
+
+  const rest = ALL_TEAMS.filter(t => !state.favs.includes(t));
+  restList.innerHTML = rest.map(t =>
+    `<span class="team-pill" onclick="toggleFav('${t.replace(/'/g,"\\'")}', false)" title="Marcar como favorito">${t}</span>`
+  ).join('');
+}
+
+function toggleFav(team, isCurrFav) {
+  if (isCurrFav) {
+    state.favs = state.favs.filter(t => t !== team);
+  } else {
+    state.favs.push(team);
+  }
+  save();
+  renderEquipos();
+  renderParticipants();
+}
+
+function updateWinnerSelect() {
+  const sel = document.getElementById('winnerSelect');
+  const allTeams = [...new Set(Object.values(state.teams).flat())].filter(t => t && t !== '—');
+  sel.innerHTML = '<option value="">— Selecciona equipo —</option>' +
+    allTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+function registerResult() {
+  const team = document.getElementById('winnerSelect').value;
+  const type = document.getElementById('resultType').value;
+  if (!team) return;
+  if (state.results.find(r => r.team === team && r.type === type)) return;
+  state.results.push({ team, type, date: new Date().toLocaleDateString('es-CO') });
+  save();
+  renderResultados();
+  renderParticipants();
+  if (type === 'champion') showTab('tabla');
+}
+
+function renderResultados() {
+  const log = document.getElementById('resultLog');
+  if (state.results.length === 0) { log.innerHTML = '<div class="empty-state">Sin resultados aún</div>'; return; }
+  const labels = { win: '⚽ Ganó', champion: '🏆 Campeón', eliminated: '✗ Eliminado' };
+  log.innerHTML = [...state.results].reverse().map(r =>
+    `<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">${r.team}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">${r.date}</div>
+      </div>
+      <span class="tag" style="${r.type==='champion'?'background:#FAEEDA;color:#633806':r.type==='eliminated'?'opacity:0.6':''}">${labels[r.type]}</span>
+    </div>`
+  ).join('');
+}
+
+function renderTabla() {
+  const champion = getChampion();
+  const eliminated = getEliminated();
+  const banner = document.getElementById('winnerBanner');
+  const content = document.getElementById('tablaContent');
+
+  if (champion) {
+    const winner = state.participants.find(p => (state.teams[p] || []).includes(champion));
+    if (winner) {
+      banner.style.display = 'block';
+      document.getElementById('winnerName').textContent = '🏆 ' + winner;
+      document.getElementById('winnerDetail').textContent = 'Tiene a ' + champion + ' — gana ' + fmt(state.participants.length * BET);
+    }
+  } else { banner.style.display = 'none'; }
+
+  if (state.participants.length === 0) { content.innerHTML = '<div class="empty-state">Sortea equipos para ver la tabla</div>'; return; }
+
+  const isFavTeam = t => state.favs.includes(t);
+
+  content.innerHTML = state.participants.map(p => {
+    const teams = state.teams[p] || ['—', '—'];
+    const alive = teams.filter(t => t && t !== '—' && !eliminated.includes(t)).length;
+    const hasChamp = teams.includes(champion);
+    const teamsStr = teams.map(t => {
+      if (!t || t === '—') return '';
+      const isC = t === champion;
+      const isE = eliminated.includes(t);
+      const isFav = isFavTeam(t);
+      return `<span style="font-size:13px;${isC?'color:#BA7517;font-weight:500':isE?'text-decoration:line-through;opacity:0.5':'color:var(--color-text-secondary)'}">${isC?'🏆':isFav?'⭐':'🎲'} ${t}</span>`;
+    }).filter(Boolean).join(' · ');
+
+    return `<div class="card" style="${hasChamp?'border:2px solid #BA7517':''}display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">${p}</div>
+        <div style="margin-top:6px">${teamsStr || '<span style="color:var(--color-text-secondary);font-size:13px">Sin sortear</span>'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:12px;color:var(--color-text-secondary)">Vivos</div>
+        <div style="font-size:18px;font-weight:500;color:${alive===2?'#1D9E75':alive===1?'#BA7517':'var(--color-text-secondary)'}">${alive}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+renderParticipants();
+updatePrize();
+</script>
