@@ -414,9 +414,10 @@ const firebaseConfig = {
   appId: "1:487738482037:web:410282bdab3d42ce55473c"
 };
 
-// 1. Inicializar Firebase
+// 1. Inicializar Firebase (Sintaxis COMPATIBLE con tu código)
 firebase.initializeApp(firebaseConfig);
 db = firebase.database();
+
 
 // 2. ÚNICA función initFirebase (Tiempo real)
 function initFirebase() {
@@ -706,7 +707,7 @@ function renderTabla() {
   }).join('');
 }
 
-renderParticipants();
-updatePrize();
+initApp();
+
 </script></body>
 </html>
