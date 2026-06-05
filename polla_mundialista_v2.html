@@ -415,21 +415,31 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-  try {
+function initApp() {
+  // Esperar a que Firebase cargue (máximo 5 segundos)
+  let attempts = 0;
+  const checkFirebase = setInterval(() => {
+    attempts++;
     if (typeof firebase !== 'undefined') {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-      initFirebase();
-    } else {
+      clearInterval(checkFirebase);
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        initFirebase();
+        console.log('✅ Firebase inicializado correctamente');
+      } catch (e) {
+        console.error('Error inicializando Firebase:', e);
+        initLocalStorage();
+      }
+    } else if (attempts > 50) {
+      clearInterval(checkFirebase);
       console.log('Firebase no disponible, usando localStorage');
       initLocalStorage();
     }
-  } catch (e) {
-    console.log('Usando localStorage como fallback:', e);
-    initLocalStorage();
-  }
-});
+  }, 100);
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
 
 // 💾 Funciones de Firebase
 function initFirebase() {
