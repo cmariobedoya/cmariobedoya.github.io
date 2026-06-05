@@ -375,8 +375,9 @@ select:focus {
 
 </div>
 
-<script src="https://unpkg.com/firebase@10.7.0/firebase-app.js"></script>
-<script src="https://unpkg.com/firebase@10.7.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
 <script>
 const BET = 50000;
 const POLLA_ID = 'polla_mundial_2026';
@@ -413,185 +414,74 @@ const firebaseConfig = {
   appId: "1:487738482037:web:410282bdab3d42ce55473c"
 };
 
-// 💾 Funciones de Firebase - Usando REST API en lugar de SDK
-let pollaRef = null;
-let syncInProgress = false;
+// 1. Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+db = firebase.database();
 
+// 2. ÚNICA función initFirebase (Tiempo real)
 function initFirebase() {
-  console.log('🔄 Inicializando Firebase Realtime Database (via REST API)...');
-  loadFromFirebase();
-  // Sincronizar cada 2 segundos
-  setInterval(loadFromFirebase, 2000);
+  console.log('🔄 Inicializando Firebase...');
+  pollaRef = db.ref('pollas/' + POLLA_ID);
+  
+  pollaRef.on('value', (snapshot) => {
+    if (snapshot.exists()) {
+      state = snapshot.val();
+      console.log('✅ Datos sincronizados');
+    }
+    isLoading = false;
+    renderParticipants();
+    updatePrize();
+  }, (error) => {
+    console.error('❌ Error leyendo datos:', error);
+    isLoading = false;
+  });
 }
 
-function loadFromFirebase() {
-  if (syncInProgress || !isLoading) return;
-  
-  const url = 'https://polla-mundialista-6086c-default-rtdb.firebaseio.com/pollas/polla_mundial_2026.json';
-  
-  fetch(url)
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.participants) {
-        state = data;
-        renderParticipants();
-        updatePrize();
-        console.log('✅ Datos sincronizados desde Firebase');
-      }
-    })
-    .catch(err => console.log('📡 Firebase sync:', err.message));
-}
-
+// 3. ÚNICA función save
 function save() {
   if (isLoading) return;
   
   const syncEl = document.getElementById('syncStatus');
   syncEl.style.display = 'block';
   syncEl.textContent = '🔄 Sincronizando...';
+  syncEl.style.background = '#0B7B3F';
   
-  const url = 'https://polla-mundialista-6086c-default-rtdb.firebaseio.com/pollas/polla_mundial_2026.json';
-  
-  syncInProgress = true;
-  fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(state)
-  })
-    .then(res => res.json())
-    .then(data => {
-      syncEl.textContent = '✅ Sincronizado con Firebase';
+  if (db && pollaRef) {
+    pollaRef.set(state).then(() => {
+      syncEl.textContent = '✅ Sincronizado';
       syncEl.style.background = '#4CAF50';
       setTimeout(() => syncEl.style.display = 'none', 1500);
-      console.log('✅ Datos guardados en Firebase');
-      syncInProgress = false;
-    })
-    .catch(err => {
-      console.error('Error guardando en Firebase:', err);
-      syncEl.textContent = '⚠️ Error (guardado local)';
+      try { localStorage.setItem('pollaData_v3', JSON.stringify(state)); } catch(e) {}
+    }).catch(err => {
+      syncEl.textContent = '⚠️ Error (Guardado local)';
       syncEl.style.background = '#FF9800';
-      
-      // Fallback a localStorage
-      try {
-        localStorage.setItem('pollaData_v3', JSON.stringify(state));
-      } catch(e) {}
+      try { localStorage.setItem('pollaData_v3', JSON.stringify(state)); } catch(e) {}
       setTimeout(() => syncEl.style.display = 'none', 2000);
-      syncInProgress = false;
     });
+  }
 }
 
-// Inicializar app
+// 4. Inicializar Aplicación
 function initApp() {
-  console.log('🔄 Iniciando aplicación...');
   isLoading = true;
-  
-  // Cargar desde localStorage primero
   try {
     const stored = localStorage.getItem('pollaData_v3');
     if (stored) {
       state = JSON.parse(stored);
-      console.log('✅ Datos cargados desde localStorage');
     }
-  } catch(e) {
-    console.error('Error cargando localStorage:', e);
-  }
+  } catch(e) {}
   
   renderParticipants();
   updatePrize();
-  isLoading = false;
-  
-  // Sincronizar con Firebase
-  initFirebase();
+  initFirebase(); // Llamamos a Firebase al arrancar
 }
 
-// Iniciar cuando DOM esté listo
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
   initApp();
 }
 
-// 💾 Funciones de Firebase
-function initFirebase() {
-  pollaRef = db.ref('pollas/' + POLLA_ID);
-  
-  pollaRef.on('value', (snapshot) => {
-    if (snapshot.exists()) {
-      state = snapshot.val();
-    }
-    isLoading = false;
-    renderParticipants();
-    updatePrize();
-  }, (error) => {
-    console.error('Error leyendo datos:', error);
-    isLoading = false;
-  });
-}
-
-// 💾 Fallback: LocalStorage
-function initLocalStorage() {
-  const KEY = 'pollaData_v3';
-  try {
-    const stored = localStorage.getItem(KEY);
-    if (stored) {
-      state = JSON.parse(stored);
-    }
-  } catch(e) {}
-  isLoading = false;
-  renderParticipants();
-  updatePrize();
-  
-  // Reemplazar la función save para usar localStorage
-  window.save = function() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-      const syncEl = document.getElementById('syncStatus');
-      syncEl.style.display = 'block';
-      syncEl.textContent = '✓ Guardado (local)';
-      setTimeout(() => syncEl.style.display = 'none', 1000);
-    } catch(e) {
-      console.error('Error guardando en localStorage:', e);
-    }
-  };
-}
-
-function save() {
-  if (isLoading) return;
-  
-  const syncEl = document.getElementById('syncStatus');
-  syncEl.style.display = 'block';
-  
-  // Si tenemos conexión a Firebase, guardar allá
-  if (db && pollaRef) {
-    syncEl.textContent = '🔄 Sincronizando...';
-    pollaRef.set(state).then(() => {
-      syncEl.textContent = '✅ Sincronizado con Firebase';
-      syncEl.style.background = '#4CAF50';
-      setTimeout(() => syncEl.style.display = 'none', 1500);
-      console.log('✅ Datos guardados en Firebase');
-    }).catch(err => {
-      console.error('❌ Error guardando en Firebase:', err);
-      syncEl.textContent = '⚠️ Error sincronizando (guardado local)';
-      syncEl.style.background = '#FF9800';
-      // Fallback a localStorage
-      try {
-        localStorage.setItem('pollaData_v3', JSON.stringify(state));
-      } catch(e) {}
-      setTimeout(() => syncEl.style.display = 'none', 2000);
-    });
-  } else {
-    // Fallback a localStorage si no hay Firebase
-    try {
-      localStorage.setItem('pollaData_v3', JSON.stringify(state));
-      syncEl.textContent = '✓ Guardado (local)';
-      syncEl.style.background = '';
-      setTimeout(() => syncEl.style.display = 'none', 1000);
-      console.log('⚠️ Guardado en localStorage (Firebase no disponible)');
-    } catch(e) {
-      console.error('Error guardando en localStorage:', e);
-      syncEl.textContent = '❌ Error al guardar';
-    }
-  }
-}
 
 function fmt(n) { return '$' + n.toLocaleString('es-CO'); }
 
