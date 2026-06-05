@@ -378,7 +378,6 @@ select:focus {
 <script src="https://unpkg.com/firebase@10.7.0/firebase-app.js"></script>
 <script src="https://unpkg.com/firebase@10.7.0/firebase-database.js"></script>
 <script>
-// Constantes globales
 const BET = 50000;
 const POLLA_ID = 'polla_mundial_2026';
 
@@ -414,76 +413,94 @@ const firebaseConfig = {
   appId: "1:487738482037:web:410282bdab3d42ce55473c"
 };
 
-// Cargar Firebase dinámicamente si no está disponible
-function loadFirebaseScripts() {
-  return new Promise((resolve) => {
-    if (typeof firebase !== 'undefined') {
-      console.log('Firebase ya está cargado');
-      resolve();
-      return;
-    }
-    
-    const script1 = document.createElement('script');
-    script1.src = 'https://unpkg.com/firebase@10.7.0/firebase-app.js';
-    script1.onload = () => {
-      console.log('firebase-app.js cargado');
-      const script2 = document.createElement('script');
-      script2.src = 'https://unpkg.com/firebase@10.7.0/firebase-database.js';
-      script2.onload = () => {
-        console.log('firebase-database.js cargado');
-        setTimeout(() => resolve(), 500);
-      };
-      script2.onerror = () => {
-        console.error('Error cargando firebase-database.js');
-        resolve();
-      };
-      document.body.appendChild(script2);
-    };
-    script1.onerror = () => {
-      console.error('Error cargando firebase-app.js');
-      resolve();
-    };
-    document.body.appendChild(script1);
-  });
+// 💾 Funciones de Firebase - Usando REST API en lugar de SDK
+let pollaRef = null;
+let syncInProgress = false;
+
+function initFirebase() {
+  console.log('🔄 Inicializando Firebase Realtime Database (via REST API)...');
+  loadFromFirebase();
+  // Sincronizar cada 2 segundos
+  setInterval(loadFromFirebase, 2000);
 }
 
-// Inicializar Firebase cuando los scripts estén listos
-async function initApp() {
-  console.log('🔄 Iniciando aplicación...');
+function loadFromFirebase() {
+  if (syncInProgress || !isLoading) return;
   
-  // Cargar scripts si es necesario
-  await loadFirebaseScripts();
+  const url = 'https://polla-mundialista-6086c-default-rtdb.firebaseio.com/pollas/polla_mundial_2026.json';
   
-  // Esperar a que Firebase global esté disponible
-  let attempts = 0;
-  const maxAttempts = 50; // 5 segundos (50 * 100ms)
-  
-  return new Promise((resolve) => {
-    const checkFirebase = setInterval(() => {
-      attempts++;
-      if (typeof firebase !== 'undefined' && typeof firebase.database === 'function') {
-        clearInterval(checkFirebase);
-        console.log('✅ Firebase SDK detectado');
-        try {
-          if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-          }
-          db = firebase.database();
-          initFirebase();
-          console.log('✅ Firebase inicializado correctamente');
-        } catch (e) {
-          console.error('❌ Error inicializando Firebase:', e);
-          initLocalStorage();
-        }
-        resolve();
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkFirebase);
-        console.warn('⚠️ Firebase no disponible, usando localStorage');
-        initLocalStorage();
-        resolve();
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.participants) {
+        state = data;
+        renderParticipants();
+        updatePrize();
+        console.log('✅ Datos sincronizados desde Firebase');
       }
-    }, 100);
-  });
+    })
+    .catch(err => console.log('📡 Firebase sync:', err.message));
+}
+
+function save() {
+  if (isLoading) return;
+  
+  const syncEl = document.getElementById('syncStatus');
+  syncEl.style.display = 'block';
+  syncEl.textContent = '🔄 Sincronizando...';
+  
+  const url = 'https://polla-mundialista-6086c-default-rtdb.firebaseio.com/pollas/polla_mundial_2026.json';
+  
+  syncInProgress = true;
+  fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(state)
+  })
+    .then(res => res.json())
+    .then(data => {
+      syncEl.textContent = '✅ Sincronizado con Firebase';
+      syncEl.style.background = '#4CAF50';
+      setTimeout(() => syncEl.style.display = 'none', 1500);
+      console.log('✅ Datos guardados en Firebase');
+      syncInProgress = false;
+    })
+    .catch(err => {
+      console.error('Error guardando en Firebase:', err);
+      syncEl.textContent = '⚠️ Error (guardado local)';
+      syncEl.style.background = '#FF9800';
+      
+      // Fallback a localStorage
+      try {
+        localStorage.setItem('pollaData_v3', JSON.stringify(state));
+      } catch(e) {}
+      setTimeout(() => syncEl.style.display = 'none', 2000);
+      syncInProgress = false;
+    });
+}
+
+// Inicializar app
+function initApp() {
+  console.log('🔄 Iniciando aplicación...');
+  isLoading = true;
+  
+  // Cargar desde localStorage primero
+  try {
+    const stored = localStorage.getItem('pollaData_v3');
+    if (stored) {
+      state = JSON.parse(stored);
+      console.log('✅ Datos cargados desde localStorage');
+    }
+  } catch(e) {
+    console.error('Error cargando localStorage:', e);
+  }
+  
+  renderParticipants();
+  updatePrize();
+  isLoading = false;
+  
+  // Sincronizar con Firebase
+  initFirebase();
 }
 
 // Iniciar cuando DOM esté listo
