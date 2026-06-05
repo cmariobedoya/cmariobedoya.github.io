@@ -375,8 +375,8 @@ select:focus {
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-database.js"></script>
+<script src="https://unpkg.com/firebase@10.7.0/firebase-app.js"></script>
+<script src="https://unpkg.com/firebase@10.7.0/firebase-database.js"></script>
 <script>
 // Constantes globales
 const BET = 50000;
@@ -414,36 +414,76 @@ const firebaseConfig = {
   appId: "1:487738482037:web:410282bdab3d42ce55473c"
 };
 
-// Inicializar Firebase cuando los scripts CDN estén listos
-function initApp() {
-  console.log('🔄 Iniciando aplicación...');
-  let attempts = 0;
-  const maxAttempts = 100; // 10 segundos (100 * 100ms)
-  
-  const checkFirebase = setInterval(() => {
-    attempts++;
-    console.log(`Firebase check ${attempts}/${maxAttempts}: ${typeof firebase !== 'undefined' ? '✅ Found' : '⏳ Loading'}`);
-    
-    if (typeof firebase !== 'undefined' && typeof firebase.database === 'function') {
-      clearInterval(checkFirebase);
-      console.log('✅ Firebase SDK detectado');
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.database();
-        initFirebase();
-        console.log('✅ Firebase inicializado correctamente');
-      } catch (e) {
-        console.error('❌ Error inicializando Firebase:', e);
-        initLocalStorage();
-      }
-    } else if (attempts >= maxAttempts) {
-      clearInterval(checkFirebase);
-      console.warn('⚠️ Firebase no disponible después de 10 segundos, usando localStorage');
-      initLocalStorage();
+// Cargar Firebase dinámicamente si no está disponible
+function loadFirebaseScripts() {
+  return new Promise((resolve) => {
+    if (typeof firebase !== 'undefined') {
+      console.log('Firebase ya está cargado');
+      resolve();
+      return;
     }
-  }, 100);
+    
+    const script1 = document.createElement('script');
+    script1.src = 'https://unpkg.com/firebase@10.7.0/firebase-app.js';
+    script1.onload = () => {
+      console.log('firebase-app.js cargado');
+      const script2 = document.createElement('script');
+      script2.src = 'https://unpkg.com/firebase@10.7.0/firebase-database.js';
+      script2.onload = () => {
+        console.log('firebase-database.js cargado');
+        setTimeout(() => resolve(), 500);
+      };
+      script2.onerror = () => {
+        console.error('Error cargando firebase-database.js');
+        resolve();
+      };
+      document.body.appendChild(script2);
+    };
+    script1.onerror = () => {
+      console.error('Error cargando firebase-app.js');
+      resolve();
+    };
+    document.body.appendChild(script1);
+  });
+}
+
+// Inicializar Firebase cuando los scripts estén listos
+async function initApp() {
+  console.log('🔄 Iniciando aplicación...');
+  
+  // Cargar scripts si es necesario
+  await loadFirebaseScripts();
+  
+  // Esperar a que Firebase global esté disponible
+  let attempts = 0;
+  const maxAttempts = 50; // 5 segundos (50 * 100ms)
+  
+  return new Promise((resolve) => {
+    const checkFirebase = setInterval(() => {
+      attempts++;
+      if (typeof firebase !== 'undefined' && typeof firebase.database === 'function') {
+        clearInterval(checkFirebase);
+        console.log('✅ Firebase SDK detectado');
+        try {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          db = firebase.database();
+          initFirebase();
+          console.log('✅ Firebase inicializado correctamente');
+        } catch (e) {
+          console.error('❌ Error inicializando Firebase:', e);
+          initLocalStorage();
+        }
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkFirebase);
+        console.warn('⚠️ Firebase no disponible, usando localStorage');
+        initLocalStorage();
+        resolve();
+      }
+    }, 100);
+  });
 }
 
 // Iniciar cuando DOM esté listo
