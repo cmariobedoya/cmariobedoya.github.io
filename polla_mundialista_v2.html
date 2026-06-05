@@ -425,7 +425,18 @@ function initFirebase() {
   
   pollaRef.on('value', (snapshot) => {
     if (snapshot.exists()) {
-      state = snapshot.val();
+      const data = snapshot.val();
+      
+      // SOLUCIÓN: Reconstruir el objeto asegurando que las propiedades 
+      // eliminadas por Firebase vuelvan a su estado vacío inicial.
+      state = {
+        participants: data.participants || [],
+        teams: data.teams || {},
+        results: data.results || [],
+        sorted: data.sorted || false,
+        favs: data.favs || [...DEFAULT_FAVS]
+      };
+      
       console.log('✅ Datos sincronizados');
     }
     isLoading = false;
@@ -467,21 +478,22 @@ function initApp() {
   try {
     const stored = localStorage.getItem('pollaData_v3');
     if (stored) {
-      state = JSON.parse(stored);
+      const data = JSON.parse(stored);
+      // Mismo principio de seguridad aquí
+      state = {
+        participants: data.participants || [],
+        teams: data.teams || {},
+        results: data.results || [],
+        sorted: data.sorted || false,
+        favs: data.favs || [...DEFAULT_FAVS]
+      };
     }
   } catch(e) {}
   
   renderParticipants();
   updatePrize();
-  initFirebase(); // Llamamos a Firebase al arrancar
+  initFirebase(); 
 }
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-
 
 function fmt(n) { return '$' + n.toLocaleString('es-CO'); }
 
