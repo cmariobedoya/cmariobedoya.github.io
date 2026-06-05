@@ -1,4 +1,12 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚽ Polla Mundialista</title>
+</head>
+<body>
 <h2 class="sr-only">Polla Mundialista — sorteo equilibrado con favoritos</h2>
 
 <style>
@@ -271,6 +279,10 @@ select:focus {
 
 <div class="app">
 
+<div id="syncStatus" style="position:fixed;top:10px;right:10px;z-index:999;background:#0B7B3F;color:white;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;display:none;">
+  🔄 Sincronizando...
+</div>
+
 <div class="header">
   <h1>⚽ Polla Mundialista</h1>
   <p>Sorteo equilibrado: 1 favorito + 1 comodín por persona</p>
@@ -363,9 +375,12 @@ select:focus {
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
 <script>
+// Constantes globales
 const BET = 50000;
-const KEY = 'pollaData_v2';
+const POLLA_ID = 'polla_mundial_2026';
 
 const DEFAULT_FAVS = [
   "Argentina 🇦🇷","Brasil 🇧🇷","Francia 🇫🇷","España 🇪🇸","Alemania 🇩🇪",
@@ -382,13 +397,96 @@ const ALL_TEAMS = [
   "Turquía 🇹🇷","Rumania 🇷🇴"
 ];
 
-let state = loadState();
+// Variables globales
+let state = { participants: [], teams: {}, results: [], sorted: false, favs: [...DEFAULT_FAVS] };
+let db = null;
+let pollaRef = null;
+let isLoading = true;
 
-function loadState() {
-  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch(e) {}
-  return { participants: [], teams: {}, results: [], sorted: false, favs: [...DEFAULT_FAVS] };
+// ⚙️ CONFIGURACIÓN DE FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyC7G29-fZKuQ4RZ88-5xR0ufS4mb6kvY7I",
+  authDomain: "polla-mundialista-6086c.firebaseapp.com",
+  databaseURL: "https://polla-mundialista-6086c-default-rtdb.firebaseio.com",
+  projectId: "polla-mundialista-6086c",
+  storageBucket: "polla-mundialista-6086c.firebasestorage.app",
+  messagingSenderId: "487738482037",
+  appId: "1:487738482037:web:410282bdab3d42ce55473c"
+};
+
+// Inicializar Firebase cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    if (typeof firebase !== 'undefined') {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      initFirebase();
+    } else {
+      console.log('Firebase no disponible, usando localStorage');
+      initLocalStorage();
+    }
+  } catch (e) {
+    console.log('Usando localStorage como fallback:', e);
+    initLocalStorage();
+  }
+});
+
+// 💾 Funciones de Firebase
+function initFirebase() {
+  pollaRef = db.ref('pollas/' + POLLA_ID);
+  
+  pollaRef.on('value', (snapshot) => {
+    if (snapshot.exists()) {
+      state = snapshot.val();
+    }
+    isLoading = false;
+    renderParticipants();
+    updatePrize();
+  }, (error) => {
+    console.error('Error leyendo datos:', error);
+    isLoading = false;
+  });
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
+
+// 💾 Fallback: LocalStorage
+function initLocalStorage() {
+  const KEY = 'pollaData_v3';
+  try {
+    const stored = localStorage.getItem(KEY);
+    if (stored) {
+      state = JSON.parse(stored);
+    }
+  } catch(e) {}
+  isLoading = false;
+  renderParticipants();
+  updatePrize();
+  
+  // Reemplazar la función save para usar localStorage
+  window.save = function() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      const syncEl = document.getElementById('syncStatus');
+      syncEl.style.display = 'block';
+      syncEl.textContent = '✓ Guardado (local)';
+      setTimeout(() => syncEl.style.display = 'none', 1000);
+    } catch(e) {
+      console.error('Error guardando en localStorage:', e);
+    }
+  };
+}
+
+function save() {
+  if (isLoading || !db) return;
+  const syncEl = document.getElementById('syncStatus');
+  syncEl.style.display = 'block';
+  pollaRef.set(state).then(() => {
+    setTimeout(() => syncEl.style.display = 'none', 1000);
+  }).catch(err => {
+    console.error('Error guardando datos:', err);
+    syncEl.textContent = '❌ Error al sincronizar';
+    syncEl.style.background = '#E24B4A';
+  });
+}
 
 function fmt(n) { return '$' + n.toLocaleString('es-CO'); }
 
@@ -603,4 +701,5 @@ function renderTabla() {
 
 renderParticipants();
 updatePrize();
-</script>
+</script></body>
+</html>
